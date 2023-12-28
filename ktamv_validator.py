@@ -130,7 +130,7 @@ def save_db():
 
             cursor.execute("UPDATE `Frames` SET status = %s WHERE id = %s;", (frames[i][1], frames[i][0]))
             
-            connection.commit()
+        connection.commit()
     except Exception as e:
         print("Error saving to DB: " + str(e))
         status_label.config(text="Error saving to DB: " + str(e))
