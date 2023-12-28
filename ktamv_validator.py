@@ -117,6 +117,31 @@ def get_next_nozzle():
         set_text_nozzle_nr(current_frame)
     else:
         print("No more nozzles")
+        
+def get_previous_nozzle():
+    global current_frame
+
+    if current_frame > 0:
+        current_frame -= 1
+        print("Previous nozzle: " + str(current_frame))
+        load_image(current_frame)
+        set_text_nozzle_nr(current_frame)
+    else:
+        print("No more nozzles")
+
+def get_first_nozzle():
+    global current_frame
+    current_frame = 0
+    print("First nozzle: " + str(current_frame))
+    load_image(current_frame)
+    set_text_nozzle_nr(current_frame)
+    
+def get_last_nozzle():
+    global current_frame
+    current_frame = len(frames) - 1
+    print("Last nozzle: " + str(current_frame))
+    load_image(current_frame)
+    set_text_nozzle_nr(current_frame)
 
 def set_text_nozzle_nr(nr : int):
     if frames[nr][1] == 0:
@@ -143,19 +168,15 @@ frame3 = tk.Frame(root)
 frame3.grid(row=2, column=0)
 frame4 = tk.Frame(root)
 frame4.grid(row=3, column=0)
-# frame1.pack_propagate(False)
 
-tk.Button(frame1, text="<<", cursor="hand2", activebackground="green", command=lambda:get_previous_nozzle()).pack(side="left")
-prev_button = tk.Button(frame1, text="<", cursor="hand2", activebackground="green")
-prev_button.pack(side="left")
+tk.Button(frame1, text="<<", cursor="hand2", activebackground="green", command=lambda:get_first_nozzle()).pack(side="left")
+tk.Button(frame1, text="<", cursor="hand2", activebackground="green", command=lambda:get_previous_nozzle()).pack(side="left")
 
 nozzlenr_label = tk.Label(frame1, text="Nozzle Nr.")
 nozzlenr_label.pack(side="left")
 
-next_button = tk.Button(frame1, text=">", cursor="hand2", activebackground="green", command=lambda:get_next_nozzle())
-next_button.pack(side="left")
-last_button = tk.Button(frame1, text=">>", cursor="hand2", activebackground="green")
-last_button.pack(side="left")
+tk.Button(frame1, text=">", cursor="hand2", activebackground="green", command=lambda:get_next_nozzle()).pack(side="left")
+tk.Button(frame1, text=">>", cursor="hand2", activebackground="green", command=lambda:get_last_nozzle()).pack(side="left")
 
 nozle_img = ImageTk.PhotoImage(Image.new('RGB', (640, 480), color = 'gray'))
 nozzle_widget = tk.Label(frame2, image=nozle_img)
