@@ -1,1 +1,1 @@
-To check validate images sent to the cloud.
+To validate images sent to the cloud before using to train the ML component.
