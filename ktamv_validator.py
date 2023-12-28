@@ -22,15 +22,18 @@ def reset_frames():
     changed_frames = []
     frames = []
     
-    # nozzle_widget.config(image='')
+    nozle_img = ImageTk.PhotoImage(Image.new('RGB', (640, 480), color = 'gray'))
+    nozzle_widget.config(image=nozle_img)
+    nozzle_widget.image = nozle_img
     
 def load_image(nr: int):
-    # nozzle_frame_img = Image.open("nozzle_frames/" + str(frames[nr][0]) + ".jpg")
     url = IMG_ADDRESS_ROOT + str(frames[nr][0]) + ".jpg"
-    print(url)
+    # print(url)
     
-    response = requests.get(url)
     try:
+        response = requests.get(url)
+        if response.status_code != 200:
+            raise Exception("Image could not be loaded: " + str(response.status_code))
         img= Image.open(BytesIO(response.content),formats=['jpeg'])
         draw = ImageDraw.Draw(img)
         print(frames[nr][2])
@@ -50,7 +53,7 @@ def load_image(nr: int):
     except Exception as e:
         print("Image could not be loaded: " + str(e))
         status_label.config(text="Image could not be loaded: " + str(e))
-        frames[nr][1] = 2
+        frames[nr][1] = 3 # Set status to Not found
         changed_frames.append(nr)
         get_next_nozzle()
         return
@@ -84,7 +87,7 @@ def fetch_db(getall=False):
     cursor = connection.cursor()
 
     if getall:
-        cursor.execute("SELECT id, status, points FROM `Frames` LIMIT 90, 10;")
+        cursor.execute("SELECT id, status, points FROM `Frames` LIMIT 10;")
     else:
         cursor.execute("SELECT id, status, points FROM `Frames` WHERE status = 0 LIMIT 90, 10;")
     
@@ -104,8 +107,35 @@ def fetch_db(getall=False):
     cursor.close()
     connection.close()
 
-    def save_db():
-        status_label.config(text="Saving to DB")
+def save_db():
+    status_label.config(text="Saving to DB")
+
+    try:
+        # Create a connection object
+        connection = mysql.connector.connect(
+            host="mariadb105.r103.websupport.se",
+            user="189138_di76479",
+            password=password_db,
+            database="189138-ktamv"
+        )
+            
+        # Create a cursor object to execute SQL queries
+        cursor = connection.cursor()
+
+        for i in changed_frames:
+            print("Saving frame: " + str(i))
+
+            cursor.execute("UPDATE `Frames` SET status = %s WHERE id = %s;", (frames[i][1], frames[i][0]))
+            
+            connection.commit()
+    except Exception as e:
+        print("Error saving to DB: " + str(e))
+        status_label.config(text="Error saving to DB: " + str(e))
+    finally:
+        # Close the cursor and connection
+        cursor.close()
+        connection.close()
+        print("DB Connection closed")
 
 def get_next_nozzle():
     global current_frame
