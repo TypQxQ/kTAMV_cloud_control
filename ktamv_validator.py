@@ -89,13 +89,12 @@ def fetch_db(getall=False):
     if getall:
         cursor.execute("SELECT id, status, points FROM `Frames` LIMIT 10;")
     else:
-        cursor.execute("SELECT id, status, points FROM `Frames` WHERE status = 0 LIMIT 90, 10;")
+        cursor.execute("SELECT id, status, points FROM `Frames` WHERE status = 0 LIMIT 100;")
     
     global frames
     
     
     frames = [list(i) for i in cursor.fetchall()]
-    print(frames)
 
     status_label.config(text="Frames fetched")
     
@@ -183,6 +182,15 @@ def set_text_nozzle_nr(nr : int):
         
     nozzlenr_label.config(text="Nozzle Nr. "+ str(nr+1) + "/" + str(len(frames)), bg=color)
     
+def set_frame_status(status : int):
+    global current_frame
+    global changed_frames
+    
+    frames[current_frame][1] = status
+    changed_frames.append(current_frame)
+    print("Frame status changed to: " + str(status))
+    get_next_nozzle()
+    
 # initialize tkinter
 root = tk.Tk()
 root.title("Ktamv Validator")
@@ -198,30 +206,43 @@ frame3 = tk.Frame(root)
 frame3.grid(row=2, column=0)
 frame4 = tk.Frame(root)
 frame4.grid(row=3, column=0)
+frame5 = tk.Frame(root)
+frame5.grid(row=4, column=0)
 
-tk.Button(frame1, text="<<", cursor="hand2", activebackground="green", command=lambda:get_first_nozzle()).pack(side="left")
-tk.Button(frame1, text="<", cursor="hand2", activebackground="green", command=lambda:get_previous_nozzle()).pack(side="left")
+tk.Button(frame1, text="<<", cursor="hand2", activebackground="green", 
+          command=lambda:get_first_nozzle()).pack(side="left")
+tk.Button(frame1, text="<", cursor="hand2", activebackground="green", 
+          command=lambda:get_previous_nozzle()).pack(side="left")
 
 nozzlenr_label = tk.Label(frame1, text="Nozzle Nr.")
 nozzlenr_label.pack(side="left")
 
-tk.Button(frame1, text=">", cursor="hand2", activebackground="green", command=lambda:get_next_nozzle()).pack(side="left")
-tk.Button(frame1, text=">>", cursor="hand2", activebackground="green", command=lambda:get_last_nozzle()).pack(side="left")
+tk.Button(frame1, text=">", cursor="hand2", activebackground="green", 
+          command=lambda:get_next_nozzle()).pack(side="left")
+tk.Button(frame1, text=">>", cursor="hand2", activebackground="green", 
+          command=lambda:get_last_nozzle()).pack(side="left")
+
+tk.Button(frame2, text="Not good", cursor="hand2", 
+          activebackground="orange", bg="red", 
+          command=lambda:set_frame_status(2)).pack(side="left")
+tk.Button(frame2, text="Good", cursor="hand2", 
+          activebackground="green", bg="green", 
+          command=lambda:set_frame_status(1)).pack(side="left")
 
 nozle_img = ImageTk.PhotoImage(Image.new('RGB', (640, 480), color = 'gray'))
-nozzle_widget = tk.Label(frame2, image=nozle_img)
+nozzle_widget = tk.Label(frame3, image=nozle_img)
 nozzle_widget.image = nozle_img
 nozzle_widget.pack()
 
-tk.Button(frame3, text="Reset and get all from DB", cursor="hand2", 
-          activebackground="green", command=lambda:fetch_db(getall=True)).pack(side="left")
-tk.Button(frame3, text="Reset and get unchecked from DB", cursor="hand2", 
+tk.Button(frame4, text="Reset and get unchecked from DB", cursor="hand2", 
           activebackground="green", command=lambda:fetch_db(getall=False)).pack(side="left")
-tk.Button(frame3, text="Save to DB", cursor="hand2", activebackground="green",
+tk.Button(frame4, text="Reset and get all from DB", cursor="hand2", 
+          activebackground="green", command=lambda:fetch_db(getall=True)).pack(side="left")
+tk.Button(frame4, text="Save to DB", cursor="hand2", activebackground="green",
           command=lambda:save_db()).pack(side="left")
 
-tk.Label(frame4, text="Status: ").pack(side="left")
-status_label = tk.Label(frame4, text="Waiting for DB")
+tk.Label(frame5, text="Status: ").pack(side="left")
+status_label = tk.Label(frame5, text="Waiting for DB")
 status_label.pack(side="left")
 
 password_db = load_password_from_file(".password.txt")
