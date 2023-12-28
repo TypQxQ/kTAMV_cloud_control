@@ -22,9 +22,13 @@ def reset_frames():
     changed_frames = []
     frames = []
     
+    reset_image()
+    
+def reset_image():
     nozle_img = ImageTk.PhotoImage(Image.new('RGB', (640, 480), color = 'gray'))
     nozzle_widget.config(image=nozle_img)
     nozzle_widget.image = nozle_img
+    nozzle_widget.update()
     
 def load_image(nr: int):
     url = IMG_ADDRESS_ROOT + str(frames[nr][0]) + ".jpg"
@@ -87,9 +91,9 @@ def fetch_db(getall=False):
     cursor = connection.cursor()
 
     if getall:
-        cursor.execute("SELECT id, status, points FROM `Frames` LIMIT 10;")
+        cursor.execute("SELECT id, status, points FROM `Frames`;")
     else:
-        cursor.execute("SELECT id, status, points FROM `Frames` WHERE status = 0 LIMIT 100;")
+        cursor.execute("SELECT id, status, points FROM `Frames` WHERE status = 0;")
     
     global frames
     
@@ -138,6 +142,8 @@ def save_db():
 
 def get_next_nozzle():
     global current_frame
+    
+    reset_image()
 
     if current_frame < len(frames) - 1:
         current_frame += 1
@@ -149,6 +155,8 @@ def get_next_nozzle():
         
 def get_previous_nozzle():
     global current_frame
+    
+    reset_image()
 
     if current_frame > 0:
         current_frame -= 1
@@ -160,6 +168,9 @@ def get_previous_nozzle():
 
 def get_first_nozzle():
     global current_frame
+    
+    reset_image()
+    
     current_frame = 0
     print("First nozzle: " + str(current_frame))
     load_image(current_frame)
@@ -167,6 +178,7 @@ def get_first_nozzle():
     
 def get_last_nozzle():
     global current_frame
+    reset_image()
     current_frame = len(frames) - 1
     print("Last nozzle: " + str(current_frame))
     load_image(current_frame)
@@ -229,9 +241,8 @@ tk.Button(frame2, text="Good", cursor="hand2",
           activebackground="green", bg="green", 
           command=lambda:set_frame_status(1)).pack(side="left")
 
-nozle_img = ImageTk.PhotoImage(Image.new('RGB', (640, 480), color = 'gray'))
-nozzle_widget = tk.Label(frame3, image=nozle_img)
-nozzle_widget.image = nozle_img
+nozzle_widget = tk.Label(frame3)
+reset_image()
 nozzle_widget.pack()
 
 tk.Button(frame4, text="Reset and get unchecked from DB", cursor="hand2", 
