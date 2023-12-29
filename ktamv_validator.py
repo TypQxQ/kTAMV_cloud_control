@@ -4,6 +4,7 @@ from PIL import ImageTk, Image, ImageDraw
 import requests
 from PIL import Image
 import mysql.connector
+import OpenCVDetectionModule
 
 IMG_ADDRESS_ROOT = "http://ktamv.ignat.se/nozzle_pics/"
 CIRCLE_RADIUS = 10
@@ -11,6 +12,7 @@ CIRCLE_RADIUS = 10
 current_frame = 0
 changed_frames = []
 frames = []
+new_coordinates = [0, 0, 0]
 
 def reset_frames():
     status_label.config(text="Resetting frames")
@@ -21,6 +23,7 @@ def reset_frames():
     current_frame = 0
     changed_frames = []
     frames = []
+    new_coordinates = [0, 0, 0]
     
     reset_image()
     
@@ -32,24 +35,34 @@ def reset_image():
     
 def load_image(nr: int):
     url = IMG_ADDRESS_ROOT + str(frames[nr][0]) + ".jpg"
-    # print(url)
+    global new_coordinates
+    new_coordinates = [0, 0, 0]
     
     try:
         response = requests.get(url)
         if response.status_code != 200:
             raise Exception("Image could not be loaded: " + str(response.status_code))
         img= Image.open(BytesIO(response.content),formats=['jpeg'])
-        draw = ImageDraw.Draw(img)
-        print(frames[nr][2])
+        new_coord, img, radius = ocv.nozzleDetection(img)
+        print(radius)
+        
         coords = frames[nr][2].strip("()").split(", ")
         coords = [int(i) for i in coords]
+        if coords != new_coord:
+            print("Coords changed")
+            print("Old: " + str(coords))
+            print("New: " + str(new_coord)) 
 
-        draw.ellipse(( coords[0] - CIRCLE_RADIUS,
-                    coords[1] - CIRCLE_RADIUS,
-                    coords[0] + CIRCLE_RADIUS, 
-                    coords[1] + CIRCLE_RADIUS),
-                    fill=(255, 0, 0, 255))
-        
+            draw = ImageDraw.Draw(img, 'RGBA')
+
+            draw.ellipse(( coords[0] - CIRCLE_RADIUS,
+                        coords[1] - CIRCLE_RADIUS,
+                        coords[0] + CIRCLE_RADIUS, 
+                        coords[1] + CIRCLE_RADIUS),
+                        fill=(0, 0, 255, 170))
+            new_coordinates = new_coord[0], new_coord[1]
+        frames[nr][3] = int(radius)
+            
         nozle_img = ImageTk.PhotoImage(img)
         nozzle_widget.config(image=nozle_img)
         nozzle_widget.image = nozle_img
@@ -91,9 +104,9 @@ def fetch_db(getall=False):
     cursor = connection.cursor()
 
     if getall:
-        cursor.execute("SELECT id, status, points FROM `Frames`;")
+        cursor.execute("SELECT id, status, points, radius FROM `Frames` WHERE id = 1861;")
     else:
-        cursor.execute("SELECT id, status, points FROM `Frames` WHERE status = 0;")
+        cursor.execute("SELECT id, status, points, radius FROM `Frames` WHERE status = 0;")
     
     global frames
     
@@ -127,9 +140,11 @@ def save_db():
 
         for i in changed_frames:
             print("Saving frame: " + str(i))
-
-            cursor.execute("UPDATE `Frames` SET status = %s WHERE id = %s;", (frames[i][1], frames[i][0]))
+            print("Saving id: " + str(frames[i][0]))
             
+            cursor.execute("UPDATE `Frames` SET status = %s, points=%s, radius = %s WHERE id = %s;", (frames[i][1], frames[i][2], frames[i][3], frames[i][0]))
+            
+                
         connection.commit()
     except Exception as e:
         print("Error saving to DB: " + str(e))
@@ -200,6 +215,11 @@ def set_frame_status(status : int):
     
     frames[current_frame][1] = status
     changed_frames.append(current_frame)
+    if status == 1 and new_coordinates != [0, 0, 0]:
+        frames[current_frame][2] = str(new_coordinates)
+        # frames[current_frame][3] = int(new_coordinates[2])
+        print("Saved new coordinates for ID: " + str(frames[current_frame][0]))
+        
     print("Frame status changed to: " + str(status))
     get_next_nozzle()
     
@@ -251,12 +271,16 @@ tk.Button(frame4, text="Reset and get all from DB", cursor="hand2",
           activebackground="green", command=lambda:fetch_db(getall=True)).pack(side="left")
 tk.Button(frame4, text="Save to DB", cursor="hand2", activebackground="green",
           command=lambda:save_db()).pack(side="left")
+tk.Button(frame4, text="Reload image", cursor="hand2", activebackground="green",
+          command=lambda:load_image(current_frame)).pack(side="left")
 
 tk.Label(frame5, text="Status: ").pack(side="left")
 status_label = tk.Label(frame5, text="Waiting for DB")
 status_label.pack(side="left")
 
 password_db = load_password_from_file(".password.txt")
+
+ocv = OpenCVDetectionModule.OpenCVDetectionModule()
 
 #run the main loop
 root.mainloop()
