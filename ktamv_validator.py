@@ -108,7 +108,7 @@ def fetch_db(get_all=False, get_done=False):
     if get_all:
         cursor.execute("SELECT id, status, points, radius FROM `Frames` WHERE id < 80;")
     elif get_done:
-        cursor.execute("SELECT id, status, points, radius FROM `Frames` WHERE (status = 1 OR status = 4) AND radius is NOT NULL LIMIT 10;")
+        cursor.execute("SELECT id, status, points, radius FROM `Frames` WHERE (status = 1 OR status = 4) AND radius is NOT NULL;")
     else:
         cursor.execute("SELECT id, status, points, radius FROM `Frames` WHERE status = 0;")
     
@@ -260,6 +260,11 @@ def save_label_yolo5(frame : int, type=0):
     radius_x = str(int(frames[frame][3])/640)
     radius_y = str(int(frames[frame][3])/480)
     # radius = frames[frame][3]
+    
+    # if type == 0:
+    #     type = "nozzle"
+    # elif type == 1:
+    #     type = "endstop"
     
     with open(file_path, 'w', newline='') as file:
         writer = csv.writer(file, delimiter=' ')
