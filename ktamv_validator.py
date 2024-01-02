@@ -5,6 +5,8 @@ import requests
 from PIL import Image
 import mysql.connector
 import OpenCVDetectionModule
+import csv
+import os
 
 IMG_ADDRESS_ROOT = "http://ktamv.ignat.se/nozzle_pics/"
 CIRCLE_RADIUS = 10
@@ -86,7 +88,7 @@ def load_password_from_file(filepath):
 def get_previous_nozzle():
     status_label.config(text="Getting previous nozzle")
 
-def fetch_db(getall=False):
+def fetch_db(get_all=False, get_done=False):
     # Reset all data
     reset_frames()
     
@@ -103,8 +105,10 @@ def fetch_db(getall=False):
     # Create a cursor object to execute SQL queries
     cursor = connection.cursor()
 
-    if getall:
-        cursor.execute("SELECT id, status, points, radius FROM `Frames` WHERE id = 1861;")
+    if get_all:
+        cursor.execute("SELECT id, status, points, radius FROM `Frames` WHERE id < 80;")
+    elif get_done:
+        cursor.execute("SELECT id, status, points, radius FROM `Frames` WHERE (status = 1 OR status = 4) AND radius is NOT NULL LIMIT 10;")
     else:
         cursor.execute("SELECT id, status, points, radius FROM `Frames` WHERE status = 0;")
     
@@ -115,9 +119,9 @@ def fetch_db(getall=False):
 
     status_label.config(text="Frames fetched")
     
-    global current_frame
-    load_image(0)
-    set_text_nozzle_nr(current_frame)
+    if not get_done:
+        load_image(0)
+        set_text_nozzle_nr(current_frame)
 
     # Close the cursor and connection
     cursor.close()
@@ -222,6 +226,46 @@ def set_frame_status(status : int):
     print("Frame status changed to: " + str(status))
     get_next_nozzle()
     
+# Save all labels for YOLOv5
+def save_all_labels_yolo5():
+    global current_frame
+    
+    fetch_db(get_done=True)
+    
+    reset_image()
+
+    for i in range(len(frames)):
+        current_frame = i
+        print("Next nozzle: " + str(current_frame))
+        set_text_nozzle_nr(current_frame)
+        if frames[current_frame][1] == 1:
+            save_label_yolo5(type=0, frame=current_frame)
+        elif frames[current_frame][1] == 4:
+            save_label_yolo5(type=1, frame=current_frame)
+
+    print("No more nozzles")
+        
+def save_label_yolo5(frame : int, type=0):
+    folder_path = "annotations"
+    if not os.path.exists(folder_path):
+        os.makedirs(folder_path)
+    
+    print("Saving label for frame: " + str(frame) + " of " + str(len(frames)) + " id: " + str(frames[frame][0])) 
+    
+    file_path = os.path.join(folder_path, str(frames[frame][0]) + ".txt")
+    
+    x, y = frames[frame][2].strip("()").split(", ")    
+    x = str(int(x)/640)
+    y= str(int(y)/480)
+    radius_x = str(int(frames[frame][3])/640)
+    radius_y = str(int(frames[frame][3])/480)
+    # radius = frames[frame][3]
+    
+    with open(file_path, 'w', newline='') as file:
+        writer = csv.writer(file, delimiter=' ')
+        writer.writerow([type, x, y, radius_x, radius_y ])
+
+    
 # initialize tkinter
 root = tk.Tk()
 root.title("Ktamv Validator")
@@ -275,11 +319,13 @@ reset_image()
 nozzle_widget.pack()
 
 tk.Button(frame4, text="Reset and get unchecked from DB", cursor="hand2", 
-          activebackground="green", command=lambda:fetch_db(getall=False)).pack(side="left")
+          activebackground="green", command=lambda:fetch_db(get_all=False)).pack(side="left")
 tk.Button(frame4, text="Reset and get all from DB", cursor="hand2", 
-          activebackground="green", command=lambda:fetch_db(getall=True)).pack(side="left")
+          activebackground="green", command=lambda:fetch_db(get_all=True)).pack(side="left")
 tk.Button(frame4, text="Save to DB", cursor="hand2", activebackground="green",
           command=lambda:save_db()).pack(side="left")
+tk.Button(frame4, text="Save all Anotations", cursor="hand2", activebackground="green",
+          command=lambda:save_all_labels_yolo5()).pack(side="left")
 tk.Button(frame4, text="Reload image", cursor="hand2", activebackground="green",
           command=lambda:load_image(current_frame)).pack(side="left")
 
