@@ -215,9 +215,8 @@ def set_frame_status(status : int):
     
     frames[current_frame][1] = status
     changed_frames.append(current_frame)
-    if status == 1 and new_coordinates != [0, 0, 0]:
+    if (status == 1 or status == 4) and new_coordinates != [0, 0, 0]:
         frames[current_frame][2] = str(new_coordinates)
-        # frames[current_frame][3] = int(new_coordinates[2])
         print("Saved new coordinates for ID: " + str(frames[current_frame][0]))
         
     print("Frame status changed to: " + str(status))
@@ -260,6 +259,16 @@ tk.Button(frame2, text="Not good", cursor="hand2",
 tk.Button(frame2, text="Good", cursor="hand2", 
           activebackground="green", bg="green", 
           command=lambda:set_frame_status(1)).pack(side="left")
+
+tk.Label(frame2, text="     ").pack(side="left")
+
+tk.Button(frame2, text="Endstop: Not good", cursor="hand2", 
+          activebackground="orange", bg="red", 
+          command=lambda:set_frame_status(5)).pack(side="left")
+tk.Button(frame2, text="Endstop: Good", cursor="hand2", 
+          activebackground="green", bg="green", 
+          command=lambda:set_frame_status(4)).pack(side="left")
+
 
 nozzle_widget = tk.Label(frame3)
 reset_image()
